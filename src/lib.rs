@@ -21,7 +21,7 @@ pub fn from_quat_and_vec(a: Quaternion, b: Vector3) -> DualQuaternion {
 }
 
 #[inline(always)]
-pub fn vector_transration(a: DualQuaternion, r: Vector3) -> Vector3 {
+pub fn vector_translation(a: DualQuaternion, r: Vector3) -> Vector3 {
     let r_dq: DualQuaternion = ( (1.0, [0.0; 3]), (0.0, r) );
     let a_conj_dq = conj(a);
     let a_conj_dq_dn = conj_dual_num(a_conj_dq);
@@ -65,6 +65,7 @@ pub fn normalize(a: DualQuaternion) -> DualQuaternion {
     mul_num_quat(tmp, a)
 }
 
+// あってるかわからん
 #[inline(always)]
 pub fn dot(a: DualQuaternion, b: DualQuaternion) -> f64 {
     let primary = quaternion::dot(a.0, b.0);
@@ -91,6 +92,8 @@ fn mul_num_quat(a: DualNumber, b: DualQuaternion) -> DualQuaternion {
     (primary, dual)
 }
 
+/// Conjugate of DualQuaternion
+/// (q0 + εq1)  -->  (q0* + εq1*)
 #[inline(always)]
 pub fn conj(a: DualQuaternion) -> DualQuaternion {
     let primary = quaternion::conj(a.0);
@@ -98,6 +101,8 @@ pub fn conj(a: DualQuaternion) -> DualQuaternion {
     (primary, dual)
 }
 
+/// Conjugate of DualNumber
+/// (q0 + εq1)  -->  (q0 - εq1)
 #[inline(always)]
 pub fn conj_dual_num(a: DualQuaternion) -> DualQuaternion {
     let dual = quaternion::mul_scalar_quat(-1.0, a.1);
@@ -125,13 +130,4 @@ pub fn exp(a: DualQuaternion) -> DualQuaternion {
     let tmp = dual_number::sin(arg);
     let dual_quat = mul_num_quat(tmp, s);
     add_num_quat(dual_num, dual_quat)
-}
-
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
 }
