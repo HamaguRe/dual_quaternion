@@ -30,11 +30,47 @@ pub fn vector_translation(a: DualQuaternion, r: Vector3) -> Vector3 {
 }
 
 #[inline(always)]
-pub fn get_vec(a: DualQuaternion) -> Vector3 {
+pub fn coordinate_translation(a: DualQuaternion, r: Vector3) -> Vector3 {
+    let r_dq: DualQuaternion = ( (1.0, [0.0; 3]), (0.0, r) );
+    let a_conj_dq = conj(a);
+    let a_conj_dq_dn = conj_dual_num(a_conj_dq);
+    let result = mul( a_conj_dq_dn, mul(r_dq, a) );
+    (result.1).1
+}
+
+/// 角速度と加速度からdt間のデュアルクォータニオンの変化量を求める．
+#[inline(always)]
+pub fn integration(omega: Vector3, accel: Vector3, dt: f64) -> DualQuaternion {
+    let dq = quaternion::integration(omega, dt);
+    let dr = quaternion::mul_scalar_vec(dt*dt, accel);  // a[m/s]^2 * t[s]^2
+    from_quat_and_vec(dq, dr)
+}
+
+/// ボディ角速度を用いた場合の積分
+#[inline(always)]
+pub fn vector_integration(d: DualQuaternion, omega: Vector3, accel: Vector3, dt: f64) -> DualQuaternion {
+    let ddq = integration(omega, accel, dt);
+    mul(ddq, d)
+}
+
+/// 空間角速度を使った積分
+#[inline(always)]
+pub fn coordinate_integration(d: DualQuaternion, omega: Vector3, accel: Vector3, dt: f64) -> DualQuaternion {
+    let ddq = integration(omega, accel, dt);
+    mul(d, ddq)
+}
+
+#[inline(always)]
+pub fn get_translation(a: DualQuaternion) -> Vector3 {
     let primary_conj = quaternion::conj(a.0);
     let r = quaternion::mul(primary_conj, a.1);
     let r = quaternion::mul_scalar_quat(2.0, r);
     r.1
+}
+
+#[inline(always)]
+pub fn get_rotation(a: DualQuaternion) -> Quaternion {
+    a.0
 }
 
 #[inline(always)]
@@ -46,31 +82,10 @@ pub fn add(a: DualQuaternion, b: DualQuaternion) -> DualQuaternion {
 
 /// Add "DualNumber" and "DualQuaternion"
 #[inline(always)]
-pub fn add_num_quat(a: DualNumber, b: DualQuaternion) -> DualQuaternion {
+fn add_num_quat(a: DualNumber, b: DualQuaternion) -> DualQuaternion {
     let primary = quaternion::add( (a.0, [0.0; 3]), b.0 );
     let dual    = quaternion::add( (a.1, [0.0; 3]), b.1 );
     (primary, dual)
-}
-
-#[inline(always)]
-pub fn norm(a: DualQuaternion) -> DualNumber {
-    let primary_norm = quaternion::norm(a.0);
-    let dual = quaternion::dot(a.0, a.1) / primary_norm;
-    (primary_norm, dual)
-}
-
-#[inline(always)]
-pub fn normalize(a: DualQuaternion) -> DualQuaternion {
-    let tmp = dual_number::inverse( norm(a) );
-    mul_num_quat(tmp, a)
-}
-
-// あってるかわからん
-#[inline(always)]
-pub fn dot(a: DualQuaternion, b: DualQuaternion) -> f64 {
-    let primary = quaternion::dot(a.0, b.0);
-    let dual = quaternion::dot(a.1, b.1);
-    dual + primary
 }
 
 #[inline(always)]
@@ -121,7 +136,29 @@ pub fn inverse(a: DualQuaternion) -> DualQuaternion {
     (primary, dual)
 }
 
-// あってるか分からない
+
+// ---------- これ以降実装が合っているか怪しい ---------- //
+
+#[inline(always)]
+pub fn norm(a: DualQuaternion) -> DualNumber {
+    let primary_norm = quaternion::norm(a.0);
+    let dual = quaternion::dot(a.0, a.1) / primary_norm;
+    (primary_norm, dual)
+}
+
+#[inline(always)]
+pub fn normalize(a: DualQuaternion) -> DualQuaternion {
+    let tmp = dual_number::inverse( norm(a) );
+    mul_num_quat(tmp, a)
+}
+
+#[inline(always)]
+pub fn dot(a: DualQuaternion, b: DualQuaternion) -> f64 {
+    let primary = quaternion::dot(a.0, b.0);
+    let dual = quaternion::dot(a.1, b.1);
+    dual + primary
+}
+
 #[inline(always)]
 pub fn exp(a: DualQuaternion) -> DualQuaternion {
     let s = normalize(a);
