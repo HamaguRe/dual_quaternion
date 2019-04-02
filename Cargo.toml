@@ -5,5 +5,6 @@ authors = ["HamaguRe <space-denpa.jp>"]
 edition = "2018"
 
 [dependencies]
-dual_number = {git = "https://github.com/HamaguRe/dual_number.git", rev = "ee00d900ff6fa957bb6a729e4c3a532ac0430110"}
-quaternion = {git = "https://github.com/HamaguRe/quaternion.git", rev = "61c0c507af671e0eb07843c3caa1b66bf24e1eb1"}
+num-traits = "0.2.6"
+dual_number = {git = "https://github.com/HamaguRe/dual_number.git", rev = "13c7efc05397c33e14810d2611bde1fb37b0b8fb"}
+quaternion = {git = "https://github.com/HamaguRe/quaternion.git", rev = "9e42982941f9bdd6d61fbf7d021873340d9d2e39"}
