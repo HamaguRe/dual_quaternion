@@ -2,7 +2,7 @@ extern crate quaternion;
 extern crate dual_quaternion;
 
 
-const EPSIRON: f64 = 0.000_000_01;
+const EPSIRON: f64 = 1e-8;
 
 
 #[test]
