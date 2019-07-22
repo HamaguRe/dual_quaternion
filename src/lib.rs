@@ -15,19 +15,18 @@ pub fn id() -> DualQuaternion<f64> {
     ( quat::id(), (0.0, [0.0; 3]) )
 }
 
-/// aの回転とbの移動を表すデュアルクォータニオンを生成
+/// qの回転とrの移動を表す二重四元数を生成
 #[inline(always)]
-pub fn from_quat_vector(a: Quaternion<f64>, b: Vector3<f64>) -> DualQuaternion<f64> {
-    let tmp  = quat::mul( (0.0, b), a );
+pub fn from_quat_vector(q: Quaternion<f64>, r: Vector3<f64>) -> DualQuaternion<f64> {
+    let tmp  = quat::mul( (0.0, r), q );
     let dual = quat::scale(0.5, tmp);
-    (a, dual)
+    (q, dual)
 }
 
-/// デュアルクォータニオンから移動量を取り出す
+/// 回転・移動を表す二重四元数から移動量を取り出す
 #[inline(always)]
 pub fn get_translation(a: DualQuaternion<f64>) -> Vector3<f64> {
-    let tmp = quat::mul( quat::conj(a.0), a.1 );
-    let r = quat::scale(2.0, tmp);
+    let r = quat::scale( 2.0, quat::mul( quat::conj(a.0), a.1 ) );
     r.1
 }
 
@@ -38,18 +37,18 @@ pub fn add(a: DualQuaternion<f64>, b: DualQuaternion<f64>) -> DualQuaternion<f64
     (prim, dual)
 }
 
+/// Add "DualNumber" and "DualQuaternion"
+#[inline(always)]
+pub fn add_num_quat(a: DualNumber<f64>, b: DualQuaternion<f64>) -> DualQuaternion<f64> {
+    let prim = ( a.0 + (b.0).0, (b.0).1 );
+    let dual = ( a.1 + (b.1).0, (b.1).1 );
+    (prim, dual)
+}
+
 #[inline(always)]
 pub fn sub(a: DualQuaternion<f64>, b: DualQuaternion<f64>) -> DualQuaternion<f64> {
     let prim = quat::sub(a.0, b.0);
     let dual = quat::sub(a.1, b.1);
-    (prim, dual)
-}
-
-/// Add "DualNumber" and "DualQuaternion"
-#[inline(always)]
-fn add_num_quat(a: DualNumber<f64>, b: DualQuaternion<f64>) -> DualQuaternion<f64> {
-    let prim = ( a.0 + (b.0).0, (b.0).1 );
-    let dual = ( a.1 + (b.1).0, (b.1).1 );
     (prim, dual)
 }
 
@@ -72,7 +71,7 @@ pub fn mul(a: DualQuaternion<f64>, b: DualQuaternion<f64>) -> DualQuaternion<f64
 /// Multiplication of "Dual Number" and "Dual Quaternion"
 /// 二重数と二重四元数の積は可換．
 #[inline(always)]
-fn mul_num_quat(a: DualNumber<f64>, b: DualQuaternion<f64>) -> DualQuaternion<f64> {
+pub fn mul_num_quat(a: DualNumber<f64>, b: DualQuaternion<f64>) -> DualQuaternion<f64> {
     let prim = quat::scale(a.0, b.0);
     let tmp0 = quat::scale(a.0, b.1);
     let tmp1 = quat::scale(a.1, b.0);
@@ -106,54 +105,32 @@ pub fn norm(a: DualQuaternion<f64>) -> DualNumber<f64> {
 #[inline(always)]
 pub fn inverse(a: DualQuaternion<f64>) -> DualQuaternion<f64> {
     let norm = norm(a);
-    let norm_pow2 = dual_number::mul(norm, norm);
-    let prim = quat::scale(norm_pow2.0, a.0);
-    let tmp0 = quat::scale(norm_pow2.0, a.1);
-    let tmp1 = quat::scale(norm_pow2.1, a.0);
+    let norm_square = dual_number::mul(norm, norm);
+    let prim = quat::scale(norm_square.0, a.0);
+    let tmp0 = quat::scale(norm_square.0, a.1);
+    let tmp1 = quat::scale(norm_square.1, a.0);
     let dual = quat::sub(tmp0, tmp1);
-    scale( (norm_pow2.0 * norm_pow2.0).recip(), (prim, dual) )
+    scale( (norm_square.0 * norm_square.0).recip(), (prim, dual) )
 }
 
 /// 位置ベクトルの回転・移動を行う
 #[inline(always)]
 pub fn vector_translation(a: DualQuaternion<f64>, r: Vector3<f64>) -> Vector3<f64> {
-    let term1 = quat_mul_only_vec( a.1, quat::conj(a.0) );
-    let term2 = quat_mul_only_vec( a.0, quat::conj(a.1) );
-    let term3 = quat::vector_rotation(a.0, r);
-    quat::add_vec( quat::sub_vec(term1, term2), term3 )
+    let tmp0 = quat::scale_vec( (a.0).0, (a.1).1 );
+    let tmp1 = quat::scale_vec( (a.1).0, (a.0).1 );
+    let tmp2 = quat::cross_vec( (a.0).1, (a.1).1 );
+    let term1 = quat::add_vec( quat::sub_vec(tmp0, tmp1), tmp2 );
+    let term2 = quat::vector_rotation(a.0, r);
+    quat::scale_add_vec(2.0, term1, term2)
 }
 
 /// 座標系の回転・移動を行う（位置ベクトルの逆）
 #[inline(always)]
-pub fn coordinate_translation(a: DualQuaternion<f64>, r: Vector3<f64>) -> Vector3<f64> {
-    let term1 = quat_mul_only_vec( quat::conj(a.0), a.1 );
-    let term2 = quat_mul_only_vec( quat::conj(a.1), a.0 );
-    let term3 = quat::coordinate_rotation(a.0, r);
-    quat::add_vec( quat::sub_vec(term1, term2), term3 )
-}
-
-// ---------- これ以降実装が合っているか怪しい ---------- //
-#[inline(always)]
-pub fn dot(a: DualQuaternion<f64>, b: DualQuaternion<f64>) -> f64 {
-    let prim = quat::dot(a.0, b.0);
-    let dual = quat::dot(a.1, b.1);
-    dual + prim
-}
-
-#[inline(always)]
-pub fn exp(a: DualQuaternion<f64>) -> DualQuaternion<f64> {
-    let s = normalize(a);
-    let arg = norm(a);
-    let dual_num = dual_number::cos(arg);
-    let tmp = dual_number::sin(arg);
-    let dual_quat = mul_num_quat(tmp, s);
-    add_num_quat(dual_num, dual_quat)
-}
-
-/// ハミルトン積の結果でベクトル部のみ返す．
-/// ベクトル移動などで使用．
-#[inline(always)]
-fn quat_mul_only_vec(a: Quaternion<f64>, b: Quaternion<f64>) -> Vector3<f64> {
-    let tmp = quat::scale_add_vec( b.0, a.1, quat::cross_vec(a.1, b.1) );
-    quat::scale_add_vec( a.0, b.1, tmp )
+pub fn frame_translation(a: DualQuaternion<f64>, r: Vector3<f64>) -> Vector3<f64> {
+    let tmp0 = quat::scale_vec( (a.0).0, (a.1).1 );
+    let tmp1 = quat::scale_vec( (a.1).0, (a.0).1 );
+    let tmp2 = quat::cross_vec( (a.1).1, (a.0).1 );
+    let term1 = quat::add_vec( quat::sub_vec(tmp0, tmp1), tmp2 );
+    let term2 = quat::frame_rotation(a.0, r);
+    quat::scale_add_vec(2.0, term1, term2)
 }

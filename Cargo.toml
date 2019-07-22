@@ -1,9 +1,9 @@
 [package]
 name = "dual_quaternion"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["HamaguRe <space-denpa.jp>"]
 edition = "2018"
 
 [dependencies]
-dual_number = {git = "https://github.com/HamaguRe/dual_number.git", rev = "13c7efc05397c33e14810d2611bde1fb37b0b8fb"}
-quaternion = {git = "https://github.com/HamaguRe/quaternion.git", rev = "448c5bdba6fcf35a138095361edab70f8c32e527"}
+dual_number = {git = "https://github.com/HamaguRe/dual_number.git", rev = "a45ead2711ee9b54a8c39a28c100c57eb5d4636d"}
+quaternion = {git = "https://github.com/HamaguRe/quaternion.git", rev = "9e7d26098701f8adda8950ffc0775af456b4150c"}
