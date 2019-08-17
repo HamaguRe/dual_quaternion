@@ -8,12 +8,9 @@ use quat::{Quaternion, Vector3};
 
 // (primary part, dual part)
 pub type DualQuaternion<T> = (Quaternion<T>, Quaternion<T>);
+// Identity dual quaternion
+pub const IDENTITY: DualQuaternion<f64> = ( quat::IDENTITY, (0.0, [0.0; 3]) );
 
-
-#[inline(always)]
-pub fn id() -> DualQuaternion<f64> {
-    ( quat::id(), (0.0, [0.0; 3]) )
-}
 
 /// qの回転とrの移動を表す二重四元数を生成
 #[inline(always)]
@@ -40,8 +37,8 @@ pub fn add(a: DualQuaternion<f64>, b: DualQuaternion<f64>) -> DualQuaternion<f64
 /// Add "DualNumber" and "DualQuaternion"
 #[inline(always)]
 pub fn add_num_quat(a: DualNumber<f64>, b: DualQuaternion<f64>) -> DualQuaternion<f64> {
-    let prim = ( a.0 + (b.0).0, (b.0).1 );
-    let dual = ( a.1 + (b.1).0, (b.1).1 );
+    let prim = ( a.0 + primary(b).0, primary(b).1 );
+    let dual = ( a.1 + dual(b).0, dual(b).1 );
     (prim, dual)
 }
 
@@ -116,21 +113,33 @@ pub fn inverse(a: DualQuaternion<f64>) -> DualQuaternion<f64> {
 /// 位置ベクトルの回転・移動を行う
 #[inline(always)]
 pub fn vector_translation(a: DualQuaternion<f64>, r: Vector3<f64>) -> Vector3<f64> {
-    let tmp0 = quat::scale_vec( (a.0).0, (a.1).1 );
-    let tmp1 = quat::scale_vec( (a.1).0, (a.0).1 );
-    let tmp2 = quat::cross_vec( (a.0).1, (a.1).1 );
+    let tmp0 = quat::scale_vec( primary(a).0, dual(a).1 );
+    let tmp1 = quat::scale_vec( dual(a).0, primary(a).1 );
+    let tmp2 = quat::cross_vec( primary(a).1, dual(a).1 );
     let term1 = quat::add_vec( quat::sub_vec(tmp0, tmp1), tmp2 );
-    let term2 = quat::vector_rotation(a.0, r);
+    let term2 = quat::vector_rotation( primary(a), r );
     quat::scale_add_vec(2.0, term1, term2)
 }
 
 /// 座標系の回転・移動を行う（位置ベクトルの逆）
 #[inline(always)]
 pub fn frame_translation(a: DualQuaternion<f64>, r: Vector3<f64>) -> Vector3<f64> {
-    let tmp0 = quat::scale_vec( (a.0).0, (a.1).1 );
-    let tmp1 = quat::scale_vec( (a.1).0, (a.0).1 );
-    let tmp2 = quat::cross_vec( (a.1).1, (a.0).1 );
+    let tmp0 = quat::scale_vec( primary(a).0, dual(a).1 );
+    let tmp1 = quat::scale_vec( dual(a).0, primary(a).1 );
+    let tmp2 = quat::cross_vec( dual(a).1, primary(a).1 );
     let term1 = quat::add_vec( quat::sub_vec(tmp0, tmp1), tmp2 );
-    let term2 = quat::frame_rotation(a.0, r);
+    let term2 = quat::frame_rotation( primary(a), r );
     quat::scale_add_vec(2.0, term1, term2)
+}
+
+/// 二重四元数のPrimary partを取り出す．
+#[inline(always)]
+fn primary(d: DualQuaternion<f64>) -> Quaternion<f64> {
+    d.0
+}
+
+/// 二重四元数のDual partを取り出す．
+#[inline(always)]
+fn dual(d: DualQuaternion<f64>) -> Quaternion<f64> {
+    d.1
 }
