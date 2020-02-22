@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 dual_number = {git = "https://github.com/HamaguRe/dual_number.git", rev = "a45ead2711ee9b54a8c39a28c100c57eb5d4636d"}
-quaternion = {git = "https://github.com/HamaguRe/quaternion.git", rev = "46cb730db30e07b8d01e767cd5202c421506026a"}
+quaternion = {git = "https://github.com/HamaguRe/quaternion.git", rev = "e11b83d839f93a18a1d4863fbcb51c9a7780fca2"}
